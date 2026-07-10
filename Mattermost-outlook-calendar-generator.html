@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Outage Notice Builder</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --panel:#151b23;
+    --panel-2:#1c2430;
+    --border:#2a3441;
+    --text:#dfe6ee;
+    --muted:#8a96a3;
+    --accent:#ff7a45;
+    --ok:#3fb950;
+    --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+    padding:24px;
+  }
+  .wrap{max-width:1180px;margin:0 auto;}
+  header{
+    border-bottom:1px solid var(--border);
+    padding-bottom:14px;margin-bottom:20px;
+  }
+  header h1{
+    font-size:18px;letter-spacing:.04em;text-transform:uppercase;
+    margin:0;font-weight:700;color:var(--text);
+  }
+  header h1 span{color:var(--accent);}
+  header p{margin:2px 0 0;color:var(--muted);font-size:12.5px;}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  @media (max-width:980px){ .grid{grid-template-columns:1fr;} }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:18px 18px 20px;
+  }
+  .panel h2{
+    font-size:11px;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--muted);margin:0 0 14px;
+  }
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block;font-size:12px;color:var(--muted);margin-bottom:4px;
+  }
+  .field .hint{font-size:11px;color:#566273;margin-top:4px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  input[type=text], input[type=url], textarea{
+    width:100%;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:9px 10px;
+    border-radius:5px;
+    font-size:13.5px;
+    font-family:inherit;
+  }
+  input::placeholder, textarea::placeholder{color:#566273;}
+  textarea{resize:vertical;font-family:var(--mono);font-size:12.5px;line-height:1.5;}
+  #emailContent{min-height:260px;}
+  #customers, #circuits{min-height:70px;}
+  input:focus, textarea:focus{outline:none;border-color:var(--accent);}
+
+  .output-panel{position:sticky;top:24px;align-self:start;}
+  .output-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .output-head h2{margin:0;}
+  pre#output{
+    background:#080b10;
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:14px;
+    font-family:var(--mono);
+    font-size:12.5px;
+    line-height:1.55;
+    white-space:pre-wrap;
+    word-break:break-word;
+    color:#c9d1d9;
+    max-height:75vh;
+    overflow-y:auto;
+    margin:0;
+  }
+  #copyBtn{
+    background:var(--accent);border:none;color:#1a0e08;font-weight:700;
+    padding:9px 16px;border-radius:6px;cursor:pointer;font-size:13px;
+  }
+  #copyBtn:hover{background:#ff8c5e;}
+  #copyBtn.copied{background:var(--ok);color:#06250c;}
+  .empty-hint{color:var(--muted);font-size:12.5px;padding:10px 2px;}
+
+  /* Tabs */
+  .tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:14px;}
+  .tab{
+    padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;
+    color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;
+    user-select:none;
+  }
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  /* Calendar preview blocks */
+  .cal-block{margin-bottom:14px;}
+  .cal-block-head{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:5px;
+  }
+  .cal-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);}
+  .copy-mini{
+    background:var(--panel-2);border:1px solid var(--border);color:var(--muted);
+    font-size:11px;padding:3px 9px;border-radius:4px;cursor:pointer;
+  }
+  .copy-mini:hover{border-color:var(--accent);color:var(--accent);}
+  .copy-mini.copied{background:#0d2e1a;border-color:var(--ok);color:var(--ok);}
+  .cal-value{
+    background:#080b10;border:1px solid var(--border);border-radius:6px;
+    padding:10px 12px;font-family:var(--mono);font-size:12.5px;
+    white-space:pre-wrap;word-break:break-word;color:#c9d1d9;line-height:1.5;
+  }
+  .attendee-list{display:flex;flex-direction:column;gap:4px;}
+  .attendee-pill{
+    font-family:var(--mono);font-size:12px;color:#c9d1d9;
+    background:#080b10;border:1px solid var(--border);
+    border-radius:4px;padding:4px 8px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>NOC <span>//</span> Outage Notice Builder</h1>
+    <p>Add the Jira ticket, paste the carrier email, list the customers affected — get a Mattermost-ready message.</p>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT: FORM -->
+    <div>
+      <div class="panel">
+        <h2>Jira Ticket</h2>
+        <div class="row2">
+          <div class="field" style="margin-bottom:0;">
+            <label>Ticket key</label>
+            <div style="display:flex;align-items:center;gap:0;">
+              <span style="background:var(--border);color:var(--muted);padding:9px 10px;border-radius:5px 0 0 5px;font-size:13.5px;border:1px solid var(--border);white-space:nowrap;">NOC-</span>
+              <input type="text" id="jiraKey" placeholder="514" style="border-radius:0 5px 5px 0;border-left:none;width:100%;">
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Site domain</label>
+            <input type="text" id="jiraDomain" value="oneqode.atlassian.net">
+          </div>
+        </div>
+        <div class="row2" style="margin-top:14px;">
+          <div class="field" style="margin-bottom:0;">
+            <label>From (carrier / provider)</label>
+            <input type="text" id="provider" placeholder="Airtel">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Provider circuit ID</label>
+            <input type="text" id="providerCircuit" placeholder="14370722">
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:16px;">
+        <h2>Carrier Email Content</h2>
+        <div class="field" style="margin-bottom:0;">
+          <label>Paste the raw email body</label>
+          <textarea id="emailContent" placeholder="Paste the carrier/vendor notification email here..."></textarea>
+          <div class="hint">Pasted as-is below the ticket link — extra blank lines are tidied up automatically.</div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:16px;">
+        <h2>Customer(s) &amp; Circuit(s) Affected</h2>
+        <div class="row2">
+          <div class="field" style="margin-bottom:0;">
+            <label>Customer name <span style="color:#566273;">(one per line)</span></label>
+            <textarea id="customers" placeholder="OneQode Assets Pty Ltd
+Avelacom"></textarea>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Circuit ID <span style="color:#566273;">(matched by line)</span></label>
+            <textarea id="circuits" placeholder="14370722
+AVC-GUM-HK-CO-IEPL-24010"></textarea>
+          </div>
+        </div>
+        <div class="hint" style="margin-top:8px;">Line 1 of each field pairs together, line 2 with line 2, and so on.</div>
+      </div>
+      <div class="panel" style="margin-top:16px;">
+        <h2>Outlook Invite (optional)</h2>
+        <div class="field" style="margin-bottom:0;">
+          <label>NOC team email(s) <span style="color:#566273;">(semicolon-separated)</span></label>
+          <textarea id="attendees" style="min-height:70px;">"Steven B" &lt;steven@oneqode.com&gt;; "Leo Huang" &lt;leo@oneqode.com&gt;; "Shota Hayashi" &lt;shota@oneqode.com&gt;; "Dion Gozon (OneQode)" &lt;jira@oneqode.atlassian.net&gt;; "Adib Izzuddin" &lt;adib@oneqode.com&gt;; "Nadia Alia" &lt;nadia@oneqode.com&gt;</textarea>
+        </div>
+        <div class="row2" style="margin-top:14px;">
+          <div class="field" style="margin-bottom:0;">
+            <label>Start</label>
+            <input type="text" id="startTime" placeholder="YYYY-MM-DDTHH:MM" onfocus="(this.type='datetime-local')" onblur="if(!this.value)this.type='text'">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>End</label>
+            <input type="text" id="endTime" placeholder="YYYY-MM-DDTHH:MM" onfocus="(this.type='datetime-local')" onblur="if(!this.value)this.type='text'">
+          </div>
+        </div>
+        <div class="hint" style="margin-top:8px;">Times are in your local timezone. Subject and body are generated from the fields above.</div>
+        <button id="icsBtn" style="margin-top:14px;background:var(--accent);border:none;color:#1a0e08;font-weight:700;padding:10px 14px;border-radius:6px;cursor:pointer;font-size:13px;width:100%;">📧 Send via Outlook</button>
+        <div id="mailtoWarning" style="display:none;margin-top:8px;padding:8px 10px;background:#2a1a0e;border:1px solid var(--accent);border-radius:5px;font-size:11.5px;color:#ffb380;">
+          The message body is long. Paste from the Mattermost preview on the right into the email body after Outlook opens.
+        </div>
+        <div class="hint" style="margin-top:8px;">Opens Outlook Web compose in a new tab with recipients and subject pre-filled. Switch to the <strong>noc@oneqode.com</strong> mailbox before sending.</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: OUTPUT -->
+    <div class="panel output-panel">
+      <div class="tabs">
+        <div class="tab active" data-tab="mattermost">Mattermost</div>
+        <div class="tab" data-tab="calendar">Outlook Calendar</div>
+      </div>
+
+      <!-- Mattermost tab -->
+      <div class="tab-panel active" id="tab-mattermost">
+        <div class="output-head">
+          <h2 style="margin:0;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);">Markdown Preview</h2>
+          <button id="copyBtn">Copy Markdown</button>
+        </div>
+        <pre id="output"></pre>
+      </div>
+
+      <!-- Outlook Calendar tab -->
+      <div class="tab-panel" id="tab-calendar">
+
+        <div class="cal-block">
+          <div class="cal-block-head">
+            <span class="cal-label">① Subject</span>
+            <button class="copy-mini" data-copy="calSubject">Copy</button>
+          </div>
+          <div class="cal-value" id="calSubject"><span class="empty-hint">Fill in the fields to generate.</span></div>
+        </div>
+
+        <div class="cal-block">
+          <div class="cal-block-head">
+            <span class="cal-label">② Attendees</span>
+            <button class="copy-mini" data-copy="calAttendeesText">Copy all</button>
+          </div>
+          <div class="attendee-list" id="calAttendees"></div>
+          <textarea id="calAttendeesText" style="position:absolute;opacity:0;pointer-events:none;height:0;"></textarea>
+        </div>
+
+        <div class="cal-block">
+          <div class="cal-block-head">
+            <span class="cal-label">③ Event body</span>
+            <button class="copy-mini" data-copy="calBody">Copy</button>
+          </div>
+          <div class="cal-value" id="calBody" style="max-height:340px;overflow-y:auto;"><span class="empty-hint">Fill in the fields to generate.</span></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+function getJiraKey(){
+  const suffix = $('jiraKey').value.trim();
+  return suffix ? `NOC-${suffix}` : '';
+}
+
+function jiraUrl(){
+  const key = getJiraKey();
+  const domain = $('jiraDomain').value.trim().replace(/^https?:\/\//,'').replace(/\/$/,'');
+  if (key && domain) return `https://${domain}/browse/${key}`;
+  return '';
+}
+
+function cleanEmail(text){
+  return text
+    .split('\n')
+    .map(l => l.replace(/[ \t]+$/,''))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function getCustomerCircuitPairs(){
+  const customers = $('customers').value.split('\n').map(s=>s.trim());
+  const circuits = $('circuits').value.split('\n').map(s=>s.trim());
+  const len = Math.max(customers.length, circuits.length);
+  const pairs = [];
+  for (let i=0;i<len;i++){
+    const customer = customers[i] || '';
+    const circuit = circuits[i] || '';
+    if (customer || circuit) pairs.push({ customer, circuit });
+  }
+  return pairs;
+}
+
+function buildMarkdown(){
+  const lines = [];
+  const key = getJiraKey();
+  const url = jiraUrl();
+  const provider = $('provider').value.trim();
+
+  if (key || url) {
+    if (key && url) lines.push(`[${key}](${url})`);
+    else lines.push(url || key);
+  }
+
+  if (provider) lines.push(`From: **${provider}**`);
+
+  if (lines.length) lines.push('');
+
+  const email = cleanEmail($('emailContent').value);
+  if (email) {
+    lines.push(email);
+    lines.push('');
+  }
+
+  const pairs = getCustomerCircuitPairs();
+
+  if (pairs.length) {
+    if (email) lines.push('-----------------------------------------------------------------------------');
+    lines.push('**Customer(s) / Circuit(s) Affected:**');
+    pairs.forEach(p=>{
+      if (p.customer && p.circuit) lines.push(`- ${p.customer} — ${p.circuit}`);
+      else if (p.customer) lines.push(`- ${p.customer}`);
+      else lines.push(`- ${p.circuit}`);
+    });
+  }
+
+  return lines.join('\n').trim();
+}
+
+function buildCalBody(){
+  const pairs  = getCustomerCircuitPairs();
+  const email  = cleanEmail($('emailContent').value);
+  const lines  = [];
+
+  if (pairs.length) {
+    pairs.forEach(p => {
+      if (p.customer) lines.push(`Customer name: ${p.customer}`);
+      if (p.circuit)  lines.push(`Customer ID:   ${p.circuit}`);
+      if (pairs.length > 1) lines.push('');
+    });
+  }
+
+  if (email) {
+    lines.push('----------------------');
+    lines.push('');
+    lines.push(email);
+  }
+
+  return lines.join('\n').trim();
+}
+
+function renderCalendar(){
+  const subject = buildSubject();
+  const body    = buildCalBody();
+  const attendees = parseAttendees();
+
+  // Subject
+  $('calSubject').textContent = subject || '';
+  if (!subject) $('calSubject').innerHTML = '<span class="empty-hint">Fill in the fields to generate.</span>';
+
+  // Attendees list
+  const list = $('calAttendees');
+  list.innerHTML = '';
+  if (attendees.length) {
+    attendees.forEach(a => {
+      const pill = document.createElement('div');
+      pill.className = 'attendee-pill';
+      pill.textContent = a.name ? `${a.name} <${a.email}>` : a.email;
+      list.appendChild(pill);
+    });
+    $('calAttendeesText').value = attendees.map(a => a.name ? `"${a.name}" <${a.email}>` : a.email).join('; ');
+  } else {
+    list.innerHTML = '<span class="empty-hint">No attendees added.</span>';
+    $('calAttendeesText').value = '';
+  }
+
+  // Body
+  $('calBody').textContent = body || '';
+  if (!body) $('calBody').innerHTML = '<span class="empty-hint">Fill in the fields to generate.</span>';
+}
+
+function render(){
+  const md = buildMarkdown();
+  if (!md) {
+    $('output').innerHTML = '<span class="empty-hint">Fill in the fields on the left — your Mattermost-ready message will appear here.</span>';
+  } else {
+    $('output').textContent = md;
+  }
+  renderCalendar();
+}
+
+// ---- tab switching ----
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    $('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ---- mini copy buttons ----
+document.querySelectorAll('.copy-mini').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const targetId = btn.dataset.copy;
+    const el = $(targetId);
+    const text = el.tagName === 'TEXTAREA' ? el.value : el.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'Copied ✓';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1600);
+    });
+  });
+});
+// fix "Copy all" label after init
+document.querySelector('[data-copy="calAttendeesText"]').textContent = 'Copy all';
+$('jiraDomain').addEventListener('input', render);
+$('provider').addEventListener('input', render);
+$('emailContent').addEventListener('input', render);
+$('customers').addEventListener('input', render);
+$('circuits').addEventListener('input', render);
+$('providerCircuit').addEventListener('input', render);
+
+$('copyBtn').addEventListener('click', ()=>{
+  const md = buildMarkdown();
+  navigator.clipboard.writeText(md).then(()=>{
+    $('copyBtn').textContent = 'Copied ✓';
+    $('copyBtn').classList.add('copied');
+    setTimeout(()=>{ $('copyBtn').textContent='Copy Markdown'; $('copyBtn').classList.remove('copied'); }, 1600);
+  });
+});
+
+
+function buildSubject(){
+  const key = getJiraKey();
+  const provider = $('provider').value.trim();
+  const providerCircuit = $('providerCircuit').value.trim();
+  const segments = [];
+  if (provider) segments.push(`${provider}${providerCircuit ? ': ' + providerCircuit : ''}`);
+  getCustomerCircuitPairs().forEach(p=>{
+    if (p.customer) segments.push(`${p.customer}${p.circuit ? ': ' + p.circuit : ''}`);
+    else if (p.circuit) segments.push(p.circuit);
+  });
+  const prefix = key ? `[${key}] Maintenance:` : 'Maintenance:';
+  return segments.length ? `${prefix} ${segments.join(' | ')}` : (key || 'Outage Notice');
+}
+
+function parseAttendees(){
+  return $('attendees').value
+    .split(';')
+    .map(s=>s.trim())
+    .filter(Boolean)
+    .map(entry=>{
+      const m = entry.match(/^"?([^"<]*)"?\s*<([^>]+)>$/);
+      if (m) return { name: m[1].trim(), email: m[2].trim() };
+      return { name: '', email: entry.replace(/[<>"]/g,'').trim() };
+    })
+    .filter(a => a.email);
+}
+
+function icsEscape(str){
+  return String(str)
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\n/g, '\\n');
+}
+
+function toIcsDate(localValue){
+  if (!localValue) return null;
+  const d = new Date(localValue);
+  if (isNaN(d.getTime())) return null;
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+}
+
+
+$('icsBtn').addEventListener('click', ()=>{
+  const subject   = buildSubject();
+  const attendees = parseAttendees();
+  const to        = attendees.map(a => a.email).join(',');
+  const body      = buildMarkdown()
+    .replace(/\[(.*?)\]\((.*?)\)/g, '$1 ($2)')
+    .replace(/\*\*(.*?)\*\*/g, '$1');
+
+  // Use Outlook Web compose deep link — works without any desktop app
+  const base = 'https://outlook.cloud.microsoft/mail/deeplink/compose';
+  const params = new URLSearchParams({
+    to:      to,
+    subject: subject,
+    body:    body,
+  });
+
+  const fullUrl  = `${base}?${params.toString()}`;
+  const shortUrl = `${base}?${new URLSearchParams({ to, subject }).toString()}`;
+
+  if (fullUrl.length > 8000){
+    $('mailtoWarning').style.display = 'block';
+    window.open(shortUrl, '_blank');
+  } else {
+    $('mailtoWarning').style.display = 'none';
+    window.open(fullUrl, '_blank');
+  }
+});
+
+render();
+</script>
+</body>
+</html>
