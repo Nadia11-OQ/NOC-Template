@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fault Email Composer – OneQode NOC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#F2F4F7; --panel:#FFFFFF; --panel-2:#F6F8FA; --border:#D3DAE2; --border-soft:#E4E9EF;
+  --text:#0F1720; --text-dim:#475565; --text-faint:#7A8796;
+  --amber:#A8670F; --cyan:#1A6E9C; --green:#17845A; --red:#C2343A; --purple:#6347CF;
+  --amber-bg:rgba(168,103,15,.10); --red-bg:rgba(194,52,58,.08); --green-bg:rgba(23,132,90,.09);
+  --accent:#1A6E9C; --on-accent:#FFFFFF;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:'IBM Plex Sans',-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+  --scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B0F14; --panel:#111823; --panel-2:#0E141D; --border:#1E2A38; --border-soft:#182230;
+    --text:#E6EDF3; --text-dim:#8A97A6; --text-faint:#5F6B7A;
+    --amber:#F2A93B; --cyan:#4FA3D1; --green:#39D08A; --red:#E5484D; --purple:#9C7CF4;
+    --amber-bg:rgba(242,169,59,.10); --red-bg:rgba(229,72,77,.10); --green-bg:rgba(57,208,138,.08);
+    --accent:#4FA3D1; --on-accent:#06121B; --scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0B0F14; --panel:#111823; --panel-2:#0E141D; --border:#1E2A38; --border-soft:#182230;
+  --text:#E6EDF3; --text-dim:#8A97A6; --text-faint:#5F6B7A;
+  --amber:#F2A93B; --cyan:#4FA3D1; --green:#39D08A; --red:#E5484D; --purple:#9C7CF4;
+  --amber-bg:rgba(242,169,59,.10); --red-bg:rgba(229,72,77,.10); --green-bg:rgba(57,208,138,.08);
+  --accent:#4FA3D1; --on-accent:#06121B; --scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+*,*::before,*::after{box-sizing:inherit;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.45;}
+button,input,select,textarea{font:inherit;color:inherit;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+::selection{background:var(--cyan);color:var(--on-accent);}
+
+/* header */
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;
+  padding:12px 22px;background:var(--panel);border-bottom:1px solid var(--border-soft);}
+.brand{display:flex;align-items:center;gap:11px;}
+.brand .dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px var(--green-bg);}
+.brand h1{margin:0;font-family:var(--mono);font-size:14px;font-weight:600;letter-spacing:.03em;}
+.brand small{display:block;color:var(--text-faint);font-size:11.5px;margin-top:1px;}
+.top-right{display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
+.inc-chip{font-family:var(--mono);font-size:12px;color:var(--text-dim);border:1px solid var(--border);border-radius:6px;padding:6px 10px;background:var(--panel-2);}
+.inc-chip b{color:var(--text);font-weight:600;}
+
+.btn{background:var(--panel-2);border:1px solid var(--border);color:var(--text-dim);border-radius:6px;padding:6px 11px;font-size:12.5px;cursor:pointer;}
+.btn:hover{color:var(--text);border-color:var(--text-faint);}
+.btn.danger{color:var(--red);border-color:var(--red);}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600;}
+.btn.primary:hover{filter:brightness(1.07);}
+.btn.done{border-color:var(--green);color:var(--green);}
+.btn.primary.done{background:var(--green);border-color:var(--green);color:var(--on-accent);}
+
+/* layout */
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:20px;padding:20px 22px 48px;max-width:1600px;margin:0 auto;}
+@media (max-width:1100px){.layout{grid-template-columns:minmax(0,1fr);}}
+@media (min-width:1101px){.compose{position:sticky;top:76px;max-height:calc(100vh - 92px);overflow-y:auto;padding-right:4px;}}
+
+.panel{background:var(--panel);border:1px solid var(--border-soft);border-radius:10px;padding:16px 18px;margin-bottom:16px;}
+.panel-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+.panel-head h2{margin:0;font-size:15px;font-weight:600;}
+.panel-head p{margin:0;color:var(--text-faint);font-size:12.5px;}
+
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px;}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 10px;}
+@media (max-width:760px){.grid4{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (max-width:520px){.grid,.grid4{grid-template-columns:minmax(0,1fr);}}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.field.full{grid-column:1/-1;}
+.field.span2{grid-column:span 2;}
+@media (max-width:520px){.field.span2{grid-column:auto;}}
+.field label{font-size:12px;color:var(--text-dim);font-weight:500;}
+.field input,.field select,.field textarea{width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:6px;padding:7px 9px;font-size:13px;outline:none;color-scheme:var(--scheme);}
+.field textarea{resize:vertical;min-height:54px;line-height:1.4;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);}
+.field input::placeholder,.field textarea::placeholder{color:var(--text-faint);}
+.hint{font-size:11.5px;color:var(--text-faint);}
+.prefixed{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--panel-2);}
+.prefixed:focus-within{border-color:var(--accent);}
+.prefixed span{display:flex;align-items:center;padding:0 9px;background:var(--border-soft);color:var(--text-dim);font-family:var(--mono);font-size:12.5px;}
+.prefixed input{border:none !important;border-radius:0 !important;}
+.check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-dim);cursor:pointer;}
+.check input{width:16px;height:16px;accent-color:var(--accent);}
+
+/* circuits */
+.ckt{border:1px solid var(--border);border-left:3px solid var(--rail,var(--red));border-radius:8px;padding:10px 12px 12px;margin-bottom:10px;background:var(--panel-2);}
+.ckt .field input,.ckt .field select{background:var(--panel);}
+.ckt-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;}
+.ckt-num{font-family:var(--mono);font-size:12.5px;font-weight:600;}
+.pill{font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;border:1px solid currentColor;}
+.pill.DOWN{color:var(--red);} .pill.FLAP,.pill.DEGRADED{color:var(--amber);} .pill.RESTORED{color:var(--green);}
+.ckt-actions{margin-left:auto;display:flex;gap:6px;}
+.ckt-actions .btn{padding:4px 9px;font-size:12px;}
+.add-row{display:flex;gap:8px;flex-wrap:wrap;}
+
+/* compose */
+.tpl-groups{display:grid;gap:12px;}
+.tpl-group h3{margin:0 0 6px;font-size:12.5px;font-weight:600;color:var(--text-dim);display:flex;align-items:center;gap:7px;}
+.tpl-group h3::before{content:'';width:8px;height:8px;border-radius:2px;background:var(--gc);}
+.tpl-group.provider{--gc:var(--purple);} .tpl-group.customer{--gc:var(--cyan);}
+.tpl-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;}
+.tpl-btn{text-align:left;background:var(--panel-2);border:1px solid var(--border-soft);border-radius:7px;padding:7px 9px;cursor:pointer;color:var(--text-dim);}
+.tpl-btn b{display:block;font-size:12.5px;font-weight:600;color:var(--text);}
+.tpl-btn span{display:block;font-size:11.5px;color:var(--text-faint);margin-top:1px;}
+.tpl-btn:hover{border-color:var(--border);}
+.tpl-btn.active{border-color:var(--rc);box-shadow:inset 3px 0 0 var(--rc);background:var(--panel);}
+
+.recips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.recip{border:1px solid var(--border);background:var(--panel-2);border-radius:999px;padding:5px 12px;font-size:12.5px;cursor:pointer;color:var(--text-dim);}
+.recip.active{border-color:var(--accent);color:var(--text);background:var(--panel);font-weight:600;}
+.recip .ok{color:var(--green);margin-left:5px;}
+.recip-label{font-size:12px;color:var(--text-faint);margin-right:4px;}
+
+.tpl-desc{margin:0 0 12px;color:var(--text-dim);font-size:13px;max-width:70ch;}
+.badge{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;border:1px solid var(--rc);color:var(--rc);margin-bottom:6px;}
+
+.preview{border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.pv-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:var(--panel-2);border-bottom:1px solid var(--border-soft);font-size:12px;color:var(--text-faint);}
+.pv-subject{padding:10px 14px;font-family:var(--mono);font-size:13px;word-break:break-word;border-bottom:1px solid var(--border-soft);background:var(--panel);}
+.paper{background:#FFFFFF;color:#1a1a1a;padding:18px 20px;overflow-x:auto;}
+.paper table{max-width:none;}
+.miss{background:#FFE6B0;color:#7A4A00;border-radius:3px;padding:0 2px;}
+.copy-bar{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:12px;}
+
+.checklist{list-style:none;margin:0;padding:0;display:grid;gap:6px;}
+.checklist li{font-size:13px;padding:7px 10px;border-radius:6px;border-left:3px solid;background:var(--panel-2);}
+.checklist li.ok{border-color:var(--green);}
+.checklist li.warn{border-color:var(--amber);background:var(--amber-bg);}
+.checklist li.bad{border-color:var(--red);background:var(--red-bg);}
+.checklist li.info{border-color:var(--cyan);}
+@media (prefers-reduced-motion:reduce){*{transition:none !important;}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="dot" aria-hidden="true"></span>
+    <div><h1>FAULT EMAIL COMPOSER</h1><small>OneQode NOC – provider and customer correspondence</small></div>
+  </div>
+  <div class="top-right">
+    <span class="inc-chip" id="incChip"></span>
+    <button class="btn" id="sampleBtn" type="button">Load sample incident</button>
+    <button class="btn" id="newBtn" type="button">New incident</button>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- LEFT: incident data -->
+  <section aria-label="Incident details">
+    <div class="panel">
+      <div class="panel-head"><h2>Incident</h2><p>Set once. Every email uses it.</p></div>
+      <div class="grid">
+        <div class="field">
+          <label for="inc-ticket">JIRA ticket</label>
+          <div class="prefixed"><span>NOC-</span><input id="inc-ticket" data-inc="ticket" placeholder="132" inputmode="numeric"></div>
+        </div>
+        <div class="field">
+          <label for="inc-detected">First detected (UTC)</label>
+          <input id="inc-detected" type="datetime-local" step="60" data-inc="detected">
+          <span class="hint">Default for every circuit. Use UTC, not local time.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Affected circuits</h2><p id="cktSummary"></p></div>
+      <div id="circuits"></div>
+      <div class="add-row"><button class="btn" id="addCkt" type="button">+ Add circuit</button></div>
+      <datalist id="dl-provider"></datalist>
+      <datalist id="dl-customer"></datalist>
+    </div>
+  </section>
+
+  <!-- RIGHT: compose -->
+  <section class="compose" aria-label="Compose email">
+    <div class="panel">
+      <div class="tpl-groups" id="tplGroups"></div>
+    </div>
+
+    <div class="panel" id="composePanel">
+      <span class="badge" id="badge"></span>
+      <div class="panel-head" style="margin-bottom:4px"><h2 id="tplTitle"></h2></div>
+      <p class="tpl-desc" id="tplDesc"></p>
+      <div class="recips" id="recips" style="margin-bottom:14px"></div>
+      <div class="grid" id="tplFields" style="margin-bottom:14px"></div>
+
+      <div class="preview">
+        <div class="pv-row"><span>Subject</span><button class="btn" type="button" id="copySubj">Copy subject</button></div>
+        <div class="pv-subject" id="subjOut"></div>
+        <div class="pv-row"><span>Body – as the recipient will see it</span></div>
+        <div class="paper" id="bodyOut"></div>
+      </div>
+      <div class="copy-bar">
+        <button class="btn" type="button" id="copyText">Copy as plain text</button>
+        <button class="btn primary" type="button" id="copyBody">Copy body (keeps table)</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Before you send</h2></div>
+      <ul class="checklist" id="checklist"></ul>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ============ constants ============ */
+const MONTHS=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+const TZS={MYT:8,SGT:8,PHT:8,HKT:8,WIB:7,ICT:7,JST:9,KST:9,AEST:10,AEDT:11,IST:5.5,UTC:0};
+const INTERVALS={'30':'30 minutes','60':'hour','120':'2 hours','240':'4 hours'};
+const STORE='oq-fault-composer-v2';
+
+// Global fields apply to every email. Everything else is stored per recipient,
+// so each provider and each customer gets its own wording.
+const GLOBAL_FIELDS=['interval','rfoDays','showProvider'];
+const DEFAULT_INC=()=>({ticket:'',detected:'',interval:'60',rfoDays:'5',showProvider:false,rec:{}});
+const NEW_ROW=(o={})=>Object.assign({oq:'',prov:'',provider:'',customer:'',a:'',b:'',svc:'',status:'DOWN',detected:'',restored:''},o);
+
+let S={inc:DEFAULT_INC(),circuits:[NEW_ROW()],tpl:'p1',recipient:{provider:'',customer:''},sent:{}};
+
+/* ============ field definitions ============ */
+const FIELDS={
+  severity:{label:'Severity',type:'select',options:[['P1','P1 – Service down'],['P2','P2 – Degraded or redundancy lost'],['P3','P3 – Intermittent or minor']]},
+  interval:{label:'Update interval',type:'select',options:[['30','Every 30 minutes'],['60','Every hour'],['120','Every 2 hours'],['240','Every 4 hours']]},
+  symptoms:{label:'What monitoring shows',type:'textarea',full:true,ph:'Interface down since 14:30 UTC, 0 Mbps, no light on Rx (LibreNMS).'},
+  checks:{label:'Checks already done on our side',type:'textarea',full:true,ph:'Light levels checked, port bounced, CPE power confirmed. No change.'},
+  siteContact:{label:'Site access contact (optional)',full:true,ph:'Ahmad, +60 12-345 6789, Equinix SG3 cage 4'},
+  provRef:{label:"Provider's ticket reference",ph:'ACME-INC-55821',hint:'Goes into the subject. Their ticketing system threads on it.'},
+  lastProvUpdate:{label:'Last update from provider (UTC, optional)',type:'datetime'},
+  escContact:{label:'Escalation contact at provider (optional)',ph:'Jane Tan, Service Delivery Manager'},
+  slaRef:{label:'Contract or SLA reference (optional)',ph:'4-hour MTTR, MSA clause 7.2'},
+  escReason:{label:'Reason for escalation',type:'textarea',full:true,ph:'No update for 2 hours and no ETR. Outage now exceeds the 4-hour MTTR.'},
+  provClaimTime:{label:'Time provider said it was restored (UTC)',type:'datetime'},
+  rfoDays:{label:'RFO due within (business days)',ph:'5',inputmode:'numeric'},
+  custTz:{label:"Customer's local time zone",type:'select',options:Object.keys(TZS).map(k=>[k,k==='UTC'?'UTC only':`${k} (UTC${TZS[k]>=0?'+':''}${TZS[k]})`])},
+  impact:{label:'Impact on the customer',type:'textarea',full:true,ph:'Primary link down. Traffic is running on the backup link with higher latency.'},
+  currentStatus:{label:'Current status',type:'textarea',full:true,ph:'A fibre cut has been located near POP-7. Field team on site, splicing in progress.'},
+  customerNote:{label:'Note to the customer (optional)',type:'textarea',full:true,ph:'We apologise that our 15:30 UTC update was late.',hint:'Apologise only if you missed an update you promised.'},
+  rfo:{label:'Reason for outage (customer-facing)',type:'textarea',full:true,ph:"A construction crew damaged a fibre cable on our partner's route between Singapore and Kuala Lumpur.",hint:"Rewrite the provider's RFO in plain language. Leave out other customers and internal details."},
+  preventive:{label:'Preventive action (optional)',type:'textarea',full:true,ph:'The cable has been rerouted through a protected duct, and route markers have been added at the construction site.'},
+  findings:{label:'Findings so far',type:'textarea',full:true,ph:'Our link to your router is up, but your router is not responding. No fault seen on the OneQode network.'},
+  checksRequested:{label:'Checks to ask for (one per line, optional)',type:'textarea',full:true,ph:'Leave empty to use the standard checks: power, cabling, restart, site access.'},
+  showProvider:{label:'Show provider names to the customer',type:'check',full:true},
+};
+
+/* ============ templates ============ */
+const TPLS={
+  p1:{group:'provider',rc:'--purple',badge:'To provider',name:'Raise fault',sub:'Open ticket, get ref + ETR',
+      desc:"Send as soon as a fault is confirmed. One email per provider, covering all of that provider's affected circuits.",
+      fields:['severity','interval','symptoms','checks','siteContact']},
+  p2:{group:'provider',rc:'--purple',badge:'To provider',name:'Chase update',sub:'Same thread, ask for ETR',
+      desc:'Reply on the same thread when the provider misses an update.',
+      fields:['provRef','lastProvUpdate','interval']},
+  p3:{group:'provider',rc:'--red',badge:'To provider – escalation',name:'Escalate',sub:'SLA breached or no response',
+      desc:"Send to the provider's escalation contact when updates stop or the SLA is breached. Keep their NOC address in CC.",
+      fields:['provRef','escContact','slaRef','escReason','interval']},
+  p4:{group:'provider',rc:'--amber',badge:'To provider',name:'Dispute restoration',sub:'They say fixed, we still see fault',
+      desc:'Use when the provider says service is back but your monitoring still shows a fault.',
+      fields:['provRef','provClaimTime','symptoms','interval']},
+  p5:{group:'provider',rc:'--green',badge:'To provider',name:'Restored – request RFO',sub:'Confirm restore, set RFO deadline',
+      desc:'Send once every circuit is back. Confirms restoration and sets a deadline for the RFO.',
+      fields:['provRef','rfoDays']},
+  c1:{group:'customer',rc:'--amber',badge:'To customer – investigating',name:'a) Initial notice',sub:'Fault detected',
+      desc:'First notice. One email per customer, listing only their circuits.',
+      fields:['custTz','interval','impact','showProvider']},
+  c2:{group:'customer',rc:'--cyan',badge:'To customer – update',name:'b) Ongoing update',sub:'Still down, cause unknown',
+      desc:'Send at every update interval, even when nothing has changed.',
+      fields:['custTz','interval','currentStatus','impact','showProvider']},
+  c3:{group:'customer',rc:'--amber',badge:'To customer – restored',name:'c) Restored, RFO pending',sub:'Back up, cause unconfirmed',
+      desc:'Service is back but the cause is not confirmed. Ask the customer to confirm service on their side.',
+      fields:['custTz','rfoDays','showProvider']},
+  c4:{group:'customer',rc:'--red',badge:'To customer – reply',name:'d) Reply to chaser',sub:'Customer followed up',
+      desc:'Reply when a customer chases you mid-incident. Always give a next-update time.',
+      fields:['custTz','interval','customerNote','currentStatus','showProvider']},
+  c5:{group:'customer',rc:'--green',badge:'To customer – resolved',name:'e) Resolved with RFO',sub:'Closure with root cause',
+      desc:'Formal closure with the reason for outage. This is the record that gets referenced later.',
+      fields:['custTz','rfo','preventive','showProvider']},
+  c6:{group:'customer',rc:'--amber',badge:'To customer – action needed',name:'f) Ask customer to check',sub:'Power, cabling, access',
+      desc:'Ask the customer to check their site when the fault may be on their side. Keep investigating in parallel.',
+      fields:['custTz','interval','findings','checksRequested','showProvider']},
+  c7:{group:'customer',rc:'--green',badge:'To customer – closed',name:'g) Closed – outside our network',sub:'Customer-side or no fault found',
+      desc:"Closure when the fault was not on the OneQode network, such as customer power or equipment. State the facts; don't assign blame.",
+      fields:['custTz','findings','showProvider']},
+};
+
+/* ============ helpers ============ */
+const $=id=>document.getElementById(id);
+const p2=n=>String(n).padStart(2,'0');
+const M=l=>`⟦${l}⟧`;
+const val=(v,l)=>(v!=null&&String(v).trim())?String(v).trim():M(l);
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function parseUTC(v){const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(v||'');return m?Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]):null;}
+function toInput(ms){const d=new Date(ms);return `${d.getUTCFullYear()}-${p2(d.getUTCMonth()+1)}-${p2(d.getUTCDate())}T${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`;}
+function fDate(ms){const d=new Date(ms);return `${p2(d.getUTCDate())}-${MONTHS[d.getUTCMonth()]}-${d.getUTCFullYear()}`;}
+function fDM(ms){const d=new Date(ms);return `${p2(d.getUTCDate())}-${MONTHS[d.getUTCMonth()]}`;}
+function fHM(ms){const d=new Date(ms);return `${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`;}
+const fUTC=ms=>`${fDate(ms)} ${fHM(ms)} UTC`;
+const fUTCs=ms=>`${fDM(ms)} ${fHM(ms)} UTC`;
+let CUR_TZ='MYT';
+function fLocal(ms){if(CUR_TZ==='UTC')return '';const l=ms+TZS[CUR_TZ]*3600000;return `${fDM(l)===fDM(ms)?'':fDM(l)+' '}${fHM(l)} ${CUR_TZ}`;}
+const fCust=ms=>{const l=fLocal(ms);return l?`${fUTC(ms)} (${l})`:fUTC(ms);};
+const fCusts=ms=>{const l=fLocal(ms);return l?`${fUTCs(ms)} / ${l}`:fUTCs(ms);};
+function dur(ms){if(ms<0)return M('check times');const m=Math.floor(ms/60000),d=Math.floor(m/1440),h=Math.floor(m%1440/60),mm=m%60;
+  if(d)return `${d}d ${h}h ${p2(mm)}m`;if(h)return `${h}h ${p2(mm)}m`;return `${mm}m`;}
+
+const rowDet=r=>parseUTC(r.detected)??parseUTC(S.inc.detected);
+const rowRes=r=>parseUTC(r.restored);
+const rowStatus=r=>rowRes(r)!=null?'RESTORED':r.status;
+function rowDur(r){const d=rowDet(r);if(d==null)return M('detected time');const e=rowRes(r);return e!=null?dur(e-d):dur(Date.now()-d)+' (ongoing)';}
+const ticket=()=>{const t=(S.inc.ticket||'').trim().replace(/^NOC-?/i,'');return t?`NOC-${t}`:M('NOC-###');};
+const uniq=k=>[...new Set(S.circuits.map(r=>(r[k]||'').trim()).filter(Boolean))];
+const gkey=()=>TPLS[S.tpl].group==='provider'?'provider':'customer';
+function recKey(){return `${TPLS[S.tpl].group}:${curRecipient()}`;}
+function R(k){const o=S.inc.rec[recKey()];return o&&o[k]!=null?o[k]:'';}
+function setR(k,v){const key=recKey();(S.inc.rec[key]=S.inc.rec[key]||{})[k]=v;}
+function curRecipient(){const k=gkey(),list=uniq(k);let r=S.recipient[k];if(!list.includes(r))r=list[0]||'';S.recipient[k]=r;return r;}
+function rowsFor(){const k=gkey(),r=curRecipient();return r?S.circuits.filter(x=>(x[k]||'').trim()===r):S.circuits.slice();}
+function nextUpdate(cust){let t=Date.now()+(+S.inc.interval||60)*60000;t=Math.ceil(t/300000)*300000;return cust?fCusts(t):fUTCs(t);}
+const intervalText=()=>INTERVALS[S.inc.interval]||'hour';
+const plural=(n,one,many)=>n===1?one:many;
+
+/* ============ circuit blocks ============ */
+function circuitBlock(rows,view,opt={}){
+  const prov=view==='prov', showRes=!!opt.restore, showDur=!!(opt.duration||opt.restore);
+  const ft=prov?fUTC:fCust, fts=prov?fUTCs:fCusts;
+  if(!rows.length)return {t:'p',text:M('add at least one circuit')};
+  if(rows.length===1){
+    const r=rows[0],kv=[];
+    if(prov){kv.push(['Provider circuit ID',val(r.prov,'provider circuit ID')]);kv.push(['OneQode reference',val(r.oq,'OneQode circuit ID')]);}
+    else{kv.push(['Circuit',val(r.oq,'OneQode circuit ID')]);if(S.inc.showProvider)kv.push(['Provider',val(r.provider,'provider')]);}
+    kv.push(['A-End / B-End',`${val(r.a,'A-End')} / ${val(r.b,'B-End')}`]);
+    if((r.svc||'').trim())kv.push(['Service',r.svc.trim()]);
+    kv.push(['Status',rowStatus(r)]);
+    const d=rowDet(r);kv.push(['Detected',d==null?M('detected time'):ft(d)]);
+    if(showRes){const e=rowRes(r);kv.push(['Restored',e==null?M('restored time'):ft(e)]);}
+    if(showDur)kv.push([rowRes(r)!=null?'Total downtime':'Duration so far',rowDur(r)]);
+    return {t:'kv',rows:kv};
+  }
+  const head=prov?['Provider circuit ID','OneQode ref']:['Circuit'];
+  if(!prov&&S.inc.showProvider)head.push('Provider');
+  head.push('A-End / B-End');
+  const anySvc=rows.some(r=>(r.svc||'').trim());if(anySvc)head.push('Service');
+  head.push('Status','Detected');
+  if(showRes)head.push('Restored');
+  if(showDur)head.push('Downtime');
+  const out=rows.map(r=>{
+    const c=prov?[val(r.prov,'provider circuit ID'),val(r.oq,'OneQode ID')]:[val(r.oq,'OneQode circuit ID')];
+    if(!prov&&S.inc.showProvider)c.push(val(r.provider,'provider'));
+    c.push(`${val(r.a,'A-End')} / ${val(r.b,'B-End')}`);
+    if(anySvc)c.push((r.svc||'').trim()||'–');
+    c.push(rowStatus(r));
+    const d=rowDet(r);c.push(d==null?M('detected'):fts(d));
+    if(showRes){const e=rowRes(r);c.push(e==null?'Not yet':fts(e));}
+    if(showDur)c.push(rowDur(r));
+    return c;
+  });
+  return {t:'table',head,rows:out};
+}
+
+/* ============ email builders ============ */
+function ctx(){
+  const rows=rowsFor(),rec=curRecipient(),n=rows.length;
+  const dets=rows.map(rowDet).filter(x=>x!=null);
+  const first=dets.length?Math.min(...dets):null;
+  const resCount=rows.filter(r=>rowRes(r)!=null).length;
+  const statuses=[...new Set(rows.map(r=>r.status))].join('/')||'DOWN';
+  return {rows,rec,n,first,resCount,allRes:n>0&&resCount===n,statuses,ref:(R('provRef')).trim()};
+}
+function provSubject(c,withRef){
+  const tag=withRef&&c.ref?`[${ticket()} / ${c.ref}]`:`[${ticket()}]`;
+  const what=c.n===1?val(c.rows[0].prov,'provider circuit ID'):`${c.n} circuits`;
+  return `${tag} OneQode Fault – ${what} – ${c.statuses} – ${c.first==null?M('detected time'):fUTC(c.first)}`;
+}
+function custSubject(c){
+  const what=c.n===1?val(c.rows[0].oq,'circuit ID'):`${c.n} circuits`;
+  return `[${ticket()}] OneQode Service Alert – ${val(c.rec,'customer')} – ${what}`;
+}
+function custOverall(c){
+  if(c.allRes)return 'RESTORED';
+  if(c.resCount)return `PARTIALLY RESTORED – ${c.resCount} of ${c.n} circuits restored`;
+  return 'ONGOING';
+}
+const yourCkts=c=>c.n===1?'your circuit':`${c.n} of your circuits`;
+const firstC=c=>c.first==null?M('detected time'):fCust(c.first);
+const partner=c=>{if(!S.inc.showProvider)return c.n>1?'network partners':'network partner';const ps=[...new Set(c.rows.map(r=>r.provider).filter(Boolean))];return ps.length?ps.join(' and '):'network partner';};
+const greetProv=c=>({t:'p',text:`Dear ${val(c.rec,'Provider')} NOC Team,`});
+const greetCust=c=>({t:'p',text:`Dear ${val(c.rec,'Customer')} Team,`});
+const SEV={P1:'P1 – Service down',P2:'P2 – Degraded or redundancy lost',P3:'P3 – Intermittent or minor'};
+
+const BUILD={
+  p1:c=>({subject:provSubject(c,false),blocks:[
+    greetProv(c),
+    {t:'p',text:`OneQode is raising a fault on the ${c.n>1?`following ${c.n} circuits`:'circuit below'}. Please acknowledge this email, share your fault ticket reference, and provide an estimated time to restore (ETR).`},
+    {t:'kv',rows:[['Severity',SEV[R('severity')||'P1']]]},
+    circuitBlock(c.rows,'prov'),
+    {t:'kv',rows:[['Monitoring',val(R('symptoms'),'what monitoring shows')],['Checks done on our side',val(R('checks'),'checks already done')]]},
+    ...(c.n>1?[{t:'p',text:'These circuits failed at around the same time. Please check for a common cause (shared fibre route, POP or equipment) rather than treating them as separate faults.'}]:[]),
+    ...((R('siteContact')||'').trim()?[{t:'p',text:`Site access contact, if a dispatch is needed on our side: ${R('siteContact').trim()}`}]:[]),
+    {t:'p',text:`Please update this thread every ${intervalText()} until service is restored. We will request a formal RFO once service is back.`}]}),
+
+  p2:c=>{const lu=parseUTC(R('lastProvUpdate'));return {subject:provSubject(c,true),blocks:[
+    greetProv(c),
+    {t:'p',text:`Following up on our ticket ${ticket()}${c.ref?` (your reference ${c.ref})`:''}. ${c.n>1?`The ${c.n} circuits below are still affected`:`The circuit below is still affected, ${rowDur(c.rows[0]).replace(' (ongoing)','')} so far`}. ${lu!=null?`Our last update from you was at ${fUTC(lu)}.`:'We have not yet received an update from you.'}`},
+    circuitBlock(c.rows,'prov',{duration:true}),
+    {t:'p',text:'Please provide:'},
+    {t:'ol',items:['Current findings and actions taken','Whether a field engineer has been dispatched, and their expected arrival time','Estimated time to restore (ETR)']},
+    {t:'p',text:`This outage is affecting our customers' services. Please reply by ${nextUpdate(false)}.`}]};},
+
+  p3:c=>{const longest=c.rows.map(r=>{const d=rowDet(r);return d==null?0:((rowRes(r)??Date.now())-d);});const L=Math.max(0,...longest);
+    const kv=[['Your ticket',val(c.ref,"provider's ticket reference")],['Fault raised',c.first==null?M('detected time'):fUTC(c.first)],['Outage duration',L?dur(L):M('detected time')]];
+    if((R('slaRef')||'').trim())kv.push(['Contract / SLA',R('slaRef').trim()]);
+    kv.push(['Reason for escalation',val(R('escReason'),'reason for escalation')]);
+    return {subject:provSubject(c,true).replace('OneQode Fault','ESCALATION – OneQode Fault'),blocks:[
+    {t:'p',text:`Dear ${(R('escContact')||'').trim()||val(c.rec,'Provider')+' Escalation Team'},`},
+    {t:'p',text:`We are escalating the fault below (OneQode ticket ${ticket()}) for immediate attention.`},
+    {t:'kv',rows:kv},
+    circuitBlock(c.rows,'prov',{duration:true}),
+    {t:'p',text:'We request:'},
+    {t:'ol',items:['A named engineer or duty manager assigned to this fault','The current restoration plan and a firm ETR',`Updates on this thread every ${intervalText()} until service is restored`,'A call with our NOC if restoration is not in sight']},
+    {t:'p',text:`Our NOC is available 24/7 to join a call if needed.`}]};},
+
+  p4:c=>{const pc=parseUTC(R('provClaimTime'));return {subject:provSubject(c,true),blocks:[
+    greetProv(c),
+    {t:'p',text:`Thank you for your update stating that service was restored${pc!=null?` at ${fUTC(pc)}`:''}. However, our monitoring still shows ${c.n>1?'these circuits':'this circuit'} as affected:`},
+    circuitBlock(c.rows,'prov',{duration:true}),
+    {t:'kv',rows:[['Current monitoring',val(R('symptoms'),'what monitoring shows now')]]},
+    {t:'p',text:'Please keep the ticket open and re-check from your side. If you need us to test at the same time (for example a loopback or a port reset), let us know and we will arrange it.'},
+    {t:'p',text:`Please confirm your next steps by ${nextUpdate(false)}.`}]};},
+
+  p5:c=>({subject:provSubject(c,true),blocks:[
+    greetProv(c),
+    {t:'p',text:`We confirm that service on the ${c.n>1?'circuits':'circuit'} below has been restored on our side. Thank you for your support.`},
+    circuitBlock(c.rows,'prov',{restore:true}),
+    {t:'p',text:`Please provide a formal Reason for Outage (RFO) within ${val(S.inc.rfoDays,'number of')} business days, including:`},
+    {t:'ol',items:['Root cause of the fault','Exact time of the fault and of restoration','Actions taken to restore service','Preventive actions to stop it happening again']},
+    {t:'p',text:'Please keep this ticket open until the RFO has been shared.'}]}),
+
+  c1:c=>({subject:custSubject(c),blocks:[
+    {t:'status',text:'INVESTIGATING'},
+    greetCust(c),
+    {t:'p',text:`Our monitoring has detected a service disruption affecting ${yourCkts(c)} from ${firstC(c)}.`},
+    circuitBlock(c.rows,'cust'),
+    {t:'kv',rows:[['Impact',val(R('impact'),'impact on the customer')]]},
+    {t:'p',text:`Our NOC is investigating and has engaged our ${partner(c)}.`},
+    {t:'p',text:'If the impact you are seeing is different from the above, or you have noticed anything on your side (equipment alarms, power issues, recent changes), please reply to this email. It will help us restore service faster.'},
+    {t:'p',text:`Next update: by ${nextUpdate(true)}, or sooner if anything changes.`}]}),
+
+  c2:c=>({subject:custSubject(c),blocks:[
+    {t:'status',text:custOverall(c)},
+    greetCust(c),
+    {t:'p',text:`Here is an update on the disruption affecting ${yourCkts(c)}, first detected at ${firstC(c)}.`},
+    circuitBlock(c.rows,'cust',{duration:true,restore:c.resCount>0}),
+    {t:'kv',rows:[['Current status',val(R('currentStatus'),'current status')],['Impact',val(R('impact'),'impact on the customer')]]},
+    {t:'p',text:'The reason for outage (RFO) has not been confirmed yet. We will share it as soon as we have it.'},
+    {t:'p',text:`Next update: by ${nextUpdate(true)}, or sooner if anything changes.`}]}),
+
+  c3:c=>({subject:custSubject(c),blocks:[
+    {t:'status',text:'RESTORED – RFO PENDING'},
+    greetCust(c),
+    {t:'p',text:`Service has been restored on ${c.n>1?`all ${c.n} affected circuits`:'your circuit'}. Details below.`},
+    circuitBlock(c.rows,'cust',{restore:true}),
+    {t:'p',text:`Please confirm that service is working normally on your side. We will keep monitoring ${c.n>1?'these circuits':'the circuit'} closely.`},
+    {t:'p',text:`The reason for outage (RFO) has not been confirmed yet. We are following up and expect to share it within ${val(S.inc.rfoDays,'number of')} business days.`},
+    {t:'p',text:`If you see any further issues, reply to this email quoting ${ticket()}.`}]}),
+
+  c4:c=>({subject:custSubject(c),blocks:[
+    {t:'status',text:custOverall(c)},
+    greetCust(c),
+    {t:'p',text:`Thank you for following up.${(R('customerNote')||'').trim()?' '+R('customerNote').trim():''}`},
+    {t:'kv',rows:[['Current status',val(R('currentStatus'),'current status')]]},
+    circuitBlock(c.rows,'cust',{duration:true,restore:c.resCount>0}),
+    {t:'p',text:`Next update: by ${nextUpdate(true)}, or sooner if anything changes.`},
+    {t:'p',text:`For anything urgent, reply to this email quoting ${ticket()}. Our NOC is available 24/7.`}]}),
+
+  c5:c=>{const kv=[['Reason for outage',val(R('rfo'),'customer-facing RFO')]];if((R('preventive')||'').trim())kv.push(['Preventive action',R('preventive').trim()]);
+    return {subject:custSubject(c),blocks:[
+    {t:'status',text:'RESOLVED'},
+    greetCust(c),
+    {t:'p',text:`The disruption affecting ${yourCkts(c)} has been resolved. Summary below.`},
+    circuitBlock(c.rows,'cust',{restore:true}),
+    {t:'kv',rows:kv},
+    {t:'p',text:`We will close this ticket in 24 hours unless you report further issues. To reopen it, reply to this email quoting ${ticket()}.`},
+    {t:'p',text:'Thank you for your patience.'}]};},
+
+  c6:c=>{const custom=(R('checksRequested')||'').split('\n').map(s=>s.trim()).filter(Boolean);
+    const items=custom.length?custom:['Confirm that the router or CPE connected to OneQode has power','Check that its cables are firmly connected, and tell us which port lights are on','If it is safe to do so, restart the equipment and tell us the time you did it','Share an on-site contact and access arrangements in case an engineer visit is needed'];
+    return {subject:custSubject(c),blocks:[
+    {t:'status',text:'INVESTIGATING – YOUR HELP NEEDED'},
+    greetCust(c),
+    {t:'p',text:`We are investigating the disruption affecting ${yourCkts(c)} from ${firstC(c)}.`},
+    circuitBlock(c.rows,'cust'),
+    {t:'kv',rows:[['Our findings so far',val(R('findings'),'findings so far')]]},
+    {t:'p',text:'To help us locate the fault, could you please check the following:'},
+    {t:'ol',items},
+    {t:'p',text:'We are continuing to investigate on our side at the same time, so there is no pause in our work while you check.'},
+    {t:'p',text:`Next update: by ${nextUpdate(true)}, or sooner once we hear from you.`}]};},
+
+  c7:c=>({subject:custSubject(c),blocks:[
+    {t:'status',text:'RESOLVED'},
+    greetCust(c),
+    {t:'p',text:`We have completed our investigation into the disruption affecting ${yourCkts(c)} from ${firstC(c)}.`},
+    {t:'kv',rows:[['Findings',val(R('findings'),'findings')]]},
+    circuitBlock(c.rows,'cust',{restore:true}),
+    {t:'p',text:'Service has been working normally since the restoration time shown above.'},
+    {t:'p',text:`We will close this ticket in 24 hours unless you report further issues. To reopen it, reply to this email quoting ${ticket()}.`}]}),
+};
+
+/* ============ renderers ============ */
+const F='font-family:Calibri,Arial,Helvetica,sans-serif;font-size:11pt;color:#1a1a1a;';
+function hl(s,pv){const e=esc(s);return pv?e.replace(/⟦([^⟧]*)⟧/g,'<span class="miss">⟦$1⟧</span>'):e;}
+const br=s=>s.replace(/\n/g,'<br>');
+function toHTML(blocks,pv){return blocks.map(b=>{switch(b.t){
+  case 'status':return `<p style="${F}margin:0 0 14px;"><b>STATUS: ${hl(b.text,pv)}</b></p>`;
+  case 'p':return `<p style="${F}margin:0 0 12px;">${br(hl(b.text,pv))}</p>`;
+  case 'kv':return `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 12px;">${b.rows.map(([k,v])=>`<tr><td style="${F}padding:2px 18px 2px 0;vertical-align:top;white-space:nowrap;color:#555555;">${esc(k)}</td><td style="${F}padding:2px 0;vertical-align:top;">${br(hl(v,pv))}</td></tr>`).join('')}</table>`;
+  case 'ol':return `<ol style="${F}margin:0 0 12px;padding-left:24px;">${b.items.map(i=>`<li style="${F}margin:0 0 3px;">${hl(i,pv)}</li>`).join('')}</ol>`;
+  case 'table':{const cs='border:1px solid #BFBFBF;padding:4px 9px;vertical-align:top;text-align:left;';
+    return `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 14px;">`+
+    `<tr>${b.head.map(h=>`<th style="${F}${cs}background:#F2F2F2;font-weight:bold;white-space:nowrap;">${esc(h)}</th>`).join('')}</tr>`+
+    b.rows.map(r=>`<tr>${r.map(c=>`<td style="${F}${cs}">${hl(c,pv)}</td>`).join('')}</tr>`).join('')+`</table>`;}
+}}).join('');}
+function toText(blocks){return blocks.map(b=>{switch(b.t){
+  case 'status':return `STATUS: ${b.text}`;
+  case 'p':return b.text;
+  case 'kv':{const w=Math.max(...b.rows.map(r=>r[0].length));return b.rows.map(([k,v])=>`${k.padEnd(w)} : ${String(v).replace(/\n/g,'\n'+' '.repeat(w+3))}`).join('\n');}
+  case 'ol':return b.items.map((x,i)=>`${i+1}. ${x}`).join('\n');
+  case 'table':return b.rows.map((r,i)=>`[${i+1}] ${r[0]}\n    ${r.slice(1).map((c,j)=>`${b.head[j+1]}: ${c}`).join(' | ')}`).join('\n');
+}}).join('\n\n');}
+
+/* ============ persistence ============ */
+let saveT=null;
+function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(STORE,JSON.stringify(S));}catch(e){}},250);}
+function load(){
+  try{const raw=localStorage.getItem(STORE);if(raw){const o=JSON.parse(raw);
+    S.inc=Object.assign(DEFAULT_INC(),o.inc||{});
+    S.circuits=Array.isArray(o.circuits)&&o.circuits.length?o.circuits.map(r=>NEW_ROW(r)):[NEW_ROW()];
+    S.tpl=TPLS[o.tpl]?o.tpl:'p1';S.recipient=Object.assign({provider:'',customer:''},o.recipient||{});S.sent=o.sent||{};}}catch(e){}
+}
+
+/* ============ UI: circuits ============ */
+const CKT_FIELDS=[
+  ['oq','OneQode circuit ID','ONEQ0001'],['prov','Provider circuit ID','ACME-778812'],
+  ['provider','Provider','Acme Transit','dl-provider'],['customer','Customer','Globex Corp','dl-customer'],
+  ['a','A-End','SIN-EQ3'],['b','B-End','KUL-AIMS'],['svc','Service (optional)','10G EPL'],
+];
+function renderCircuits(){
+  $('circuits').innerHTML=S.circuits.map((r,i)=>{
+    const st=rowStatus(r);
+    return `<div class="ckt" data-i="${i}" style="--rail:var(${st==='RESTORED'?'--green':st==='DOWN'?'--red':'--amber'})">
+      <div class="ckt-head"><span class="ckt-num">Circuit ${i+1}</span><span class="pill ${st}" data-pill>${st}</span>
+        <div class="ckt-actions"><button class="btn" type="button" data-act="dup" title="Copy provider, customer and times into a new row">Duplicate</button>${S.circuits.length>1?'<button class="btn" type="button" data-act="del">Remove</button>':''}</div></div>
+      <div class="grid4">
+        ${CKT_FIELDS.map(([k,l,ph,dl])=>`<div class="field"><label for="c${i}-${k}">${l}</label><input id="c${i}-${k}" data-k="${k}" value="${esc(r[k]||'')}" placeholder="${ph}"${dl?` list="${dl}"`:''} autocomplete="off"></div>`).join('')}
+        <div class="field"><label for="c${i}-status">Fault type</label><select id="c${i}-status" data-k="status">${['DOWN','FLAP','DEGRADED'].map(s=>`<option${r.status===s?' selected':''}>${s}</option>`).join('')}</select></div>
+        <div class="field span2"><label for="c${i}-detected">Detected (UTC, blank = incident time)</label><input id="c${i}-detected" type="datetime-local" step="60" data-k="detected" value="${esc(r.detected||'')}"></div>
+        <div class="field span2"><label for="c${i}-restored">Restored (UTC, blank = still down)</label><input id="c${i}-restored" type="datetime-local" step="60" data-k="restored" value="${esc(r.restored||'')}"></div>
+      </div></div>`;}).join('');
+}
+$('circuits').addEventListener('input',e=>{
+  const card=e.target.closest('.ckt'),k=e.target.dataset.k;if(!card||!k)return;
+  const r=S.circuits[+card.dataset.i];r[k]=e.target.value;
+  const st=rowStatus(r),pill=card.querySelector('[data-pill]');pill.textContent=st;pill.className='pill '+st;
+  card.style.setProperty('--rail',`var(${st==='RESTORED'?'--green':st==='DOWN'?'--red':'--amber'})`);
+  refresh();
+});
+$('circuits').addEventListener('change',e=>{if(e.target.dataset.k==='status')$('circuits').dispatchEvent(new Event('input',{bubbles:true}));});
+$('circuits').addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b)return;const i=+b.closest('.ckt').dataset.i;
+  if(b.dataset.act==='del')S.circuits.splice(i,1);
+  if(b.dataset.act==='dup'){const s=S.circuits[i];S.circuits.splice(i+1,0,NEW_ROW({provider:s.provider,customer:s.customer,a:s.a,svc:s.svc,status:s.status,detected:s.detected,restored:s.restored}));}
+  renderCircuits();renderFields();refresh();
+  if(b.dataset.act==='dup'){const el=document.getElementById(`c${i+1}-oq`);if(el)el.focus();}
+});
+$('addCkt').onclick=()=>{S.circuits.push(NEW_ROW());renderCircuits();refresh();const el=document.getElementById(`c${S.circuits.length-1}-oq`);if(el)el.focus();};
+
+/* ============ UI: templates ============ */
+function renderTplButtons(){
+  const g=grp=>Object.entries(TPLS).filter(([,t])=>t.group===grp).map(([id,t])=>
+    `<button class="tpl-btn${S.tpl===id?' active':''}" type="button" data-tpl="${id}" style="--rc:var(${t.rc})"><b>${t.name}</b><span>${t.sub}</span></button>`).join('');
+  $('tplGroups').innerHTML=`<div class="tpl-group provider"><h3>To provider</h3><div class="tpl-list">${g('provider')}</div></div>
+    <div class="tpl-group customer"><h3>To customer</h3><div class="tpl-list">${g('customer')}</div></div>`;
+}
+$('tplGroups').addEventListener('click',e=>{const b=e.target.closest('[data-tpl]');if(!b)return;S.tpl=b.dataset.tpl;selectTpl();});
+function selectTpl(){
+  const t=TPLS[S.tpl];
+  renderTplButtons();
+  const badge=$('badge');badge.textContent=t.badge;badge.style.setProperty('--rc',`var(${t.rc})`);
+  $('tplTitle').textContent=t.name;$('tplDesc').textContent=t.desc;
+  renderFields();refresh();
+}
+function fieldValue(k){
+  if(GLOBAL_FIELDS.includes(k))return S.inc[k];
+  const v=R(k);
+  if(k==='custTz')return v||'MYT';
+  if(k==='severity')return v||'P1';
+  return v;
+}
+function renderFields(){
+  const t=TPLS[S.tpl],rec=curRecipient();
+  $('tplFields').innerHTML=t.fields.map(k=>{
+    const d=FIELDS[k],v=fieldValue(k),id='f-'+k;
+    let label=d.label;if(!GLOBAL_FIELDS.includes(k)&&rec)label+=` – ${rec}`;
+    let input;
+    if(d.type==='select')input=`<select id="${id}" data-f="${k}">${d.options.map(([o,l])=>`<option value="${o}"${String(v)===o?' selected':''}>${esc(l)}</option>`).join('')}</select>`;
+    else if(d.type==='textarea')input=`<textarea id="${id}" data-f="${k}" placeholder="${esc(d.ph||'')}">${esc(v||'')}</textarea>`;
+    else if(d.type==='datetime')input=`<input id="${id}" type="datetime-local" step="60" data-f="${k}" value="${esc(v||'')}">`;
+    else if(d.type==='check')return `<div class="field full"><label class="check"><input type="checkbox" data-f="${k}"${v?' checked':''}> ${esc(label)}</label></div>`;
+    else input=`<input id="${id}" data-f="${k}" value="${esc(v||'')}" placeholder="${esc(d.ph||'')}"${d.inputmode?` inputmode="${d.inputmode}"`:''}>`;
+    return `<div class="field${d.full?' full':''}"><label for="${id}">${esc(label)}</label>${input}${d.hint?`<span class="hint">${esc(d.hint)}</span>`:''}</div>`;
+  }).join('');
+}
+function onField(e){
+  const k=e.target.dataset.f;if(!k)return;const d=FIELDS[k],rec=curRecipient();
+  const v=d.type==='check'?e.target.checked:e.target.value;
+  if(GLOBAL_FIELDS.includes(k))S.inc[k]=v;else setR(k,v);
+  refresh();
+}
+$('tplFields').addEventListener('input',onField);
+$('tplFields').addEventListener('change',onField);
+
+/* ============ UI: recipients, preview, checklist ============ */
+function renderRecips(){
+  const k=gkey(),list=uniq(k),rec=curRecipient(),word=k==='provider'?'provider':'customer';
+  if(!list.length){$('recips').innerHTML=`<span class="recip-label">Fill in the ${word} on each circuit to split emails by ${word}.</span>`;return;}
+  $('recips').innerHTML=`<span class="recip-label">${list.length>1?`One email per ${word}:`:`${word[0].toUpperCase()+word.slice(1)}:`}</span>`+
+    list.map(r=>{const n=S.circuits.filter(x=>(x[k]||'').trim()===r).length,sent=S.sent[`${S.tpl}|${r}`];
+      return `<button class="recip${r===rec?' active':''}" type="button" data-r="${esc(r)}">${esc(r)} (${n})${sent?'<span class="ok" aria-label="copied">✓</span>':''}</button>`;}).join('');
+}
+$('recips').addEventListener('click',e=>{const b=e.target.closest('[data-r]');if(!b)return;S.recipient[gkey()]=b.dataset.r;renderFields();refresh();});
+
+let LAST={subject:'',blocks:[]};
+function renderPreview(){
+  const c=ctx();CUR_TZ=TPLS[S.tpl].group==='customer'?(R('custTz')||'MYT'):'UTC';
+  LAST=BUILD[S.tpl](c);
+  $('subjOut').innerHTML=hl(LAST.subject,true);
+  $('bodyOut').innerHTML=toHTML(LAST.blocks,true);
+  return c;
+}
+function renderChecklist(c){
+  const t=TPLS[S.tpl],k=gkey(),list=uniq(k),items=[];
+  const text=LAST.subject+'\n'+toText(LAST.blocks);const miss=(text.match(/⟦/g)||[]).length;
+  if(miss)items.push(['warn',`${miss} ${plural(miss,'field is','fields are')} still empty. They are highlighted in the email.`]);
+  else items.push(['ok','No empty fields.']);
+  const unassigned=S.circuits.filter(x=>!(x[k]||'').trim()).length;
+  if(list.length&&unassigned)items.push(['bad',`${unassigned} ${plural(unassigned,'circuit has','circuits have')} no ${k} set and ${plural(unassigned,'is','are')} not in any email.`]);
+  if(list.length>1){const left=list.filter(r=>!S.sent[`${S.tpl}|${r}`]);
+    items.push([left.length?'info':'ok',left.length?`${list.length} ${k}s affected. Still to send: ${left.join(', ')}.`:`Copied for all ${list.length} ${k}s.`]);}
+  if(t.group==='customer'){
+    items.push(['ok',`Only ${c.rec||'this customer'}'s circuits are included. Send to them only; never CC another customer.`]);
+    if(S.inc.showProvider)items.push(['warn','Provider names are visible to the customer. Check this is allowed.']);
+  }else{
+    items.push(['ok','Customer names are not included.']);
+    const noProv=c.rows.filter(r=>!(r.prov||'').trim()).length;
+    if(noProv)items.push(['bad',`${noProv} ${plural(noProv,'circuit is','circuits are')} missing the provider circuit ID. The provider cannot find it without one.`]);
+    if(S.tpl!=='p1'&&!c.ref)items.push(['warn',"Add the provider's ticket reference once they share it."]);
+  }
+  if(['c3','c5','c7','p5'].includes(S.tpl)&&!c.allRes)items.push(['bad',`Only ${c.resCount} of ${c.n} circuits have a restored time. Use the ongoing update instead, or fill in restored times.`]);
+  if(S.tpl==='c2'&&c.allRes)items.push(['info','Every circuit is restored. Use "c) Restored, RFO pending" instead.']);
+  if(t.fields.includes('interval'))items.push(['info',`Set a reminder for ${nextUpdate(false)}. Send an update then, even if nothing has changed.`]);
+  if(S.tpl==='c5')items.push(['info',"Check the RFO is in plain language and names no other customer."]);
+  $('checklist').innerHTML=items.map(([l,txt])=>`<li class="${l}">${esc(txt)}</li>`).join('');
+}
+function renderTop(){
+  const t=(S.inc.ticket||'').trim(),n=S.circuits.length,pv=uniq('provider').length,cu=uniq('customer').length;
+  $('incChip').innerHTML=`<b>${t?'NOC-'+esc(t.replace(/^NOC-?/i,'')):'No ticket'}</b> | ${n} ${plural(n,'circuit','circuits')}, ${pv} ${plural(pv,'provider','providers')}, ${cu} ${plural(cu,'customer','customers')}`;
+  $('cktSummary').textContent=n>1?`${n} circuits. Emails split automatically by provider and customer.`:'Add more circuits for a multi-circuit outage.';
+  const opts=k=>uniq(k).map(v=>`<option value="${esc(v)}">`).join('');
+  $('dl-provider').innerHTML=opts('provider');$('dl-customer').innerHTML=opts('customer');
+}
+function refresh(){renderRecips();const c=renderPreview();renderChecklist(c);renderTop();save();}
+
+/* ============ incident inputs ============ */
+document.querySelectorAll('[data-inc]').forEach(el=>el.addEventListener('input',()=>{S.inc[el.dataset.inc]=el.value;
+  if(el.dataset.inc==='detected')renderCircuitPills();refresh();}));
+function renderCircuitPills(){document.querySelectorAll('.ckt').forEach(card=>{const r=S.circuits[+card.dataset.i];const st=rowStatus(r);const p=card.querySelector('[data-pill]');p.textContent=st;p.className='pill '+st;});}
+function fillStatic(){
+  document.querySelectorAll('[data-inc]').forEach(el=>el.value=S.inc[el.dataset.inc]||'');
+}
+
+/* ============ copy ============ */
+async function copyRich(html,text){
+  try{if(navigator.clipboard&&window.ClipboardItem){await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([text],{type:'text/plain'})})]);return true;}}catch(e){}
+  const d=document.createElement('div');d.innerHTML=html;d.style.cssText='position:fixed;left:-9999px;top:0;background:#fff;';document.body.appendChild(d);
+  const r=document.createRange();r.selectNodeContents(d);const s=getSelection();s.removeAllRanges();s.addRange(r);
+  let ok=false;try{ok=document.execCommand('copy');}catch(e){}s.removeAllRanges();d.remove();return ok;
+}
+async function copyPlain(text){
+  try{await navigator.clipboard.writeText(text);return true;}catch(e){}
+  const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;left:-9999px;';document.body.appendChild(ta);ta.select();
+  let ok=false;try{ok=document.execCommand('copy');}catch(e){}ta.remove();return ok;
+}
+function flash(btn,ok,label){const orig=btn.dataset.orig||btn.textContent;btn.dataset.orig=orig;btn.textContent=ok?label:'Copy failed – select and copy manually';btn.classList.toggle('done',ok);
+  setTimeout(()=>{btn.textContent=orig;btn.classList.remove('done');},1600);}
+function markSent(){const r=curRecipient();if(r){S.sent[`${S.tpl}|${r}`]=true;refresh();}}
+$('copySubj').onclick=async e=>flash(e.currentTarget,await copyPlain(LAST.subject),'Subject copied');
+$('copyBody').onclick=async e=>{const b=e.currentTarget;const ok=await copyRich(toHTML(LAST.blocks,false),toText(LAST.blocks));flash(b,ok,'Body copied');if(ok)markSent();};
+$('copyText').onclick=async e=>{const b=e.currentTarget;const ok=await copyPlain(`Subject: ${LAST.subject}\n\n${toText(LAST.blocks)}`);flash(b,ok,'Copied');if(ok)markSent();};
+
+/* ============ sample + reset ============ */
+$('sampleBtn').onclick=()=>{
+  const now=Math.floor(Date.now()/300000)*300000,ago=m=>toInput(now-m*60000);
+  S.inc=Object.assign(DEFAULT_INC(),{ticket:'132',detected:ago(135),rec:{
+    'provider:Acme Transit':{provRef:'ACME-INC-55821',severity:'P1',
+      symptoms:'3 interfaces on SIN-EQ3 edge went down at the same time, 0 Mbps, no light on Rx. ACME-779001 is flapping.',
+      checks:'Light levels checked, ports bounced, optics swapped on ACME-778812. No change.',siteContact:'Ahmad, +60 12-345 6789, Equinix SG3 cage 4',
+      escReason:'No update for 2 hours and no ETR. The outage now exceeds the 4-hour MTTR.',slaRef:'4-hour MTTR, MSA clause 7.2'},
+    'provider:Beta Telco':{severity:'P1',symptoms:'Interface down at KUL-AIMS, 0 Mbps, Rx light present.',checks:'Port bounced, CPE power confirmed. No change.'},
+    'customer:Globex Corp':{custTz:'MYT',impact:'Your Singapore–Kuala Lumpur and Singapore–Jakarta links are down; traffic is on backup paths. Your Kuala Lumpur–Bangkok link was down for 75 minutes and is now restored.',
+      currentStatus:'A fibre cut has been located near Johor Bahru. A field team is on site and splicing is in progress.',
+      rfo:"A construction crew damaged a fibre cable on our partner's route between Singapore and Kuala Lumpur.",preventive:'The cable has been rerouted through a protected duct, and route markers have been added at the construction site.'},
+    'customer:Initech':{custTz:'AEDT',impact:'Your IP Transit link is flapping, causing intermittent packet loss.',
+      currentStatus:'The fault has been traced to a fibre cut near Johor Bahru. Repair is in progress.'}}});
+  S.circuits=[
+    NEW_ROW({oq:'ONEQ0001',prov:'ACME-778812',provider:'Acme Transit',customer:'Globex Corp',a:'SIN-EQ3',b:'KUL-AIMS',svc:'10G EPL',status:'DOWN'}),
+    NEW_ROW({oq:'ONEQ0004',prov:'ACME-778815',provider:'Acme Transit',customer:'Globex Corp',a:'SIN-EQ3',b:'JKT-CYBER',svc:'1G EPL',status:'DOWN'}),
+    NEW_ROW({oq:'ONEQ0009',prov:'ACME-779001',provider:'Acme Transit',customer:'Initech',a:'SIN-EQ3',b:'KUL-AIMS',svc:'10G IP Transit',status:'FLAP',detected:ago(120)}),
+    NEW_ROW({oq:'ONEQ0012',prov:'BT-SG-44120',provider:'Beta Telco',customer:'Globex Corp',a:'KUL-AIMS',b:'BKK-TCC',svc:'1G EPL',status:'DOWN',detected:ago(95),restored:ago(20)}),
+  ];
+  S.sent={};S.recipient={provider:'',customer:''};
+  fillStatic();renderCircuits();selectTpl();
+};
+$('newBtn').onclick=e=>{
+  const b=e.currentTarget;
+  if(!b.classList.contains('danger')){b.classList.add('danger');b.textContent='Click again to clear';setTimeout(()=>{b.classList.remove('danger');b.textContent='New incident';},3000);return;}
+  b.classList.remove('danger');b.textContent='New incident';
+  S={inc:DEFAULT_INC(),circuits:[NEW_ROW()],tpl:'p1',recipient:{provider:'',customer:''},sent:{}};
+  fillStatic();renderCircuits();selectTpl();
+};
+
+/* ============ init ============ */
+load();fillStatic();renderCircuits();selectTpl();
+setInterval(()=>{const c=renderPreview();renderChecklist(c);},60000);
+</script>
+</body>
+</html>
